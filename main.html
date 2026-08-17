@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Main Page</title>
+    <link rel="stylesheet" href="main.css" />
+  </head>
+
+  <body>
+    <main class="main-poster" aria-label="Main page">
+      <div class="main-background" aria-hidden="true"></div>
+      <div class="main-frame" aria-hidden="true"></div>
+
+      <div class="main-counter" id="main-counter" aria-live="off">
+        000,000.00
+      </div>
+      <img class="main-gif main-human" src="libraries/human.gif" alt="" />
+      <img class="main-gif main-type" src="libraries/Type.gif" alt="" />
+
+      <section class="main-gallery" aria-label="Figure cards">
+        <img class="main-diamond main-diamond-1" src="libraries/4.svg" alt="" />
+
+        <figure class="main-card" tabindex="0" role="button" aria-pressed="false">
+          <div class="main-card-stage">
+            <div class="main-card-inner">
+              <div class="main-card-face main-card-front">
+                <img src="libraries/3-1.svg" alt="" />
+              </div>
+              <div class="main-card-face main-card-back">
+                <div class="answer-card answer-card-questions">
+                  <h2>Answer the<br />Following Questions.</h2>
+
+                  <div class="question-block">
+                    <span class="question-index">[1]</span>
+                    <div>
+                      <p class="question-title">What's your Hogwarts house?</p>
+                      <p class="choice" data-age="0"><span class="choice-box">[<span></span>]</span> Ravencalw</p>
+                      <p class="choice" data-age="5"><span class="choice-box">[<span></span>]</span> Harry Potter</p>
+                      <p class="choice" data-age="10"><span class="choice-box">[<span></span>]</span> I don't know</p>
+                    </div>
+                  </div>
+
+                  <div class="question-block">
+                    <span class="question-index">[2]</span>
+                    <div>
+                      <p class="question-title">What's your first social media?</p>
+                      <p class="choice" data-age="10"><span class="choice-box">[<span></span>]</span> MySpace/Facebook</p>
+                      <p class="choice" data-age="3"><span class="choice-box">[<span></span>]</span> Instagram/Snapchat</p>
+                      <p class="choice" data-age="0"><span class="choice-box">[<span></span>]</span> TikTok</p>
+                      <p class="choice" data-age="5"><span class="choice-box">[<span></span>]</span> None</p>
+                    </div>
+                  </div>
+
+                  <div class="question-block">
+                    <span class="question-index">[3]</span>
+                    <div>
+                      <p class="question-title">Which do you prefer?</p>
+                      <p class="choice" data-age="0"><span class="choice-box">[<span></span>]</span> DM/Text</p>
+                      <p class="choice" data-age="3"><span class="choice-box">[<span></span>]</span> What's app</p>
+                      <p class="choice" data-age="5"><span class="choice-box">[<span></span>]</span> Call</p>
+                      <p class="choice" data-age="10"><span class="choice-box">[<span></span>]</span> Meeting in person</p>
+                    </div>
+                  </div>
+
+                  <div class="question-block">
+                    <span class="question-index">[4]</span>
+                    <div>
+                      <p class="question-title">
+                        What emoji do you use when<br />something is funny?
+                      </p>
+                      <p class="choice" data-age="0"><span class="choice-box">[<span></span>]</span> 💀 /😭</p>
+                      <p class="choice" data-age="2"><span class="choice-box">[<span></span>]</span> 😂</p>
+                      <p class="choice" data-age="3"><span class="choice-box">[<span></span>]</span> 🙂</p>
+                      <p class="choice" data-age="7"><span class="choice-box">[<span></span>]</span> haha</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <figcaption>Figure 01. Trend Test</figcaption>
+        </figure>
+
+        <img class="main-diamond main-diamond-2" src="libraries/4.svg" alt="" />
+
+        <figure class="main-card" tabindex="0" role="button" aria-pressed="false">
+          <div class="main-card-stage">
+            <div class="main-card-inner">
+              <div class="main-card-face main-card-front">
+                <img src="libraries/3-2.svg" alt="" />
+              </div>
+              <div class="main-card-face main-card-back">
+                <div class="answer-card answer-card-draw">
+                  <h2>Draw the line<br />following the image.</h2>
+                  <img class="answer-head-outline" src="libraries/5.svg" alt="" />
+                  <canvas class="draw-canvas" aria-label="Drawing canvas"></canvas>
+                </div>
+              </div>
+            </div>
+          </div>
+          <figcaption>Figure 02. Drawing Test</figcaption>
+        </figure>
+
+        <img class="main-diamond main-diamond-3" src="libraries/4.svg" alt="" />
+
+        <figure class="main-card" tabindex="0" role="button" aria-pressed="false">
+          <div class="main-card-stage">
+            <div class="main-card-inner">
+              <div class="main-card-face main-card-front">
+                <img src="libraries/3-3.svg" alt="" />
+              </div>
+              <div class="main-card-face main-card-back">
+                <div class="answer-card answer-card-submit">
+                  <h2>
+                    Remember<br />the numbers<br />and write them down.
+                  </h2>
+                  <p class="click-label">(Click)</p>
+                  <input class="answer-input number-input" type="text" aria-label="Remembered number" />
+                  <p class="name-label">Your name</p>
+                  <input class="answer-input name-input" type="text" aria-label="Your name" />
+                  <button class="submit-button" type="button">SUBMIT</button>
+                </div>
+              </div>
+            </div>
+          </div>
+          <figcaption>Figure 03. Memory Test</figcaption>
+        </figure>
+
+        <img class="main-diamond main-diamond-4" src="libraries/4.svg" alt="" />
+      </section>
+    </main>
+
+    <script src="main.js"></script>
+  </body>
+</html>
