@@ -60,15 +60,24 @@ let currentAgeYears = ageYears;
 let activeAgingFont = "skin";
 let totalCost = 0;
 let lastFontAgingValue = null;
+let lastWrinkleAmount = null;
 let lastRoughScaleValue = null;
+let lastRough2AgeBucket = null;
 let lastRough2Key = "";
 let lastRoughScaleTimestamp = 0;
+let lastClockUiTimestamp = 0;
+let lastAgeDisplayKey = "";
+let lastMaskClassKey = "";
 let wrinkleTextUpdateTimer = 0;
+let activeTextUpdateTimer = 0;
+let roughCanvasUpdateTimer = 0;
 let isPrintPending = false;
 let mathmaticFont = null;
 const mathmaticGlyphCache = new Map();
 const maxTimeSpeed = yearSeconds * 2;
 const roughScaleFrameMs = 320;
+const clockUiFrameMs = 180;
+const canvasRenderScale = 1;
 const agingFonts = {
   wrinkle: {
     axisMax: 100,
@@ -103,7 +112,9 @@ if (window.p5) {
     p.setup = () => {
       p.noCanvas();
       lastRough2Key = "";
-      drawRoughCanvas();
+      if (activeAgingFont === "rough2") {
+        drawRoughCanvas();
+      }
     };
   });
 }
@@ -117,12 +128,20 @@ function setAgingAxis(ageValue) {
     Math.max(0, ((ageValue - 20) / (maxAge - 20)) * axisMax)
   );
   if (activeAgingFont === "wrinkle") {
-    updateWrinkleFrame(null, Math.round(axisValue));
+    const nextWrinkleAmount = Math.round(axisValue);
+    if (nextWrinkleAmount !== lastWrinkleAmount) {
+      lastWrinkleAmount = nextWrinkleAmount;
+      updateWrinkleFrame(null, nextWrinkleAmount);
+    }
     return;
   }
 
   if (activeAgingFont === "rough2") {
-    drawRoughCanvas();
+    const nextRough2AgeBucket = Math.round(ageValue * 2);
+    if (nextRough2AgeBucket !== lastRough2AgeBucket) {
+      lastRough2AgeBucket = nextRough2AgeBucket;
+      drawRoughCanvas();
+    }
     return;
   }
 
@@ -159,6 +178,9 @@ function selectAgingFont(fontName) {
   activeAgingFont = fontName;
   fontTesterEl.dataset.agingFont = fontName;
   lastRoughScaleTimestamp = 0;
+  lastWrinkleAmount = null;
+  lastRough2AgeBucket = null;
+  lastMaskClassKey = "";
   lastRough2Key = "";
 
   agingOptionEls.forEach((option) => {
@@ -176,7 +198,6 @@ function selectAgingFont(fontName) {
   );
   setAgingAxis(currentAgeYears);
   updateWrinkleText();
-  drawRoughCanvas(lastRoughScaleValue || 0);
 }
 
 selectAgingFont(activeAgingFont);
@@ -222,7 +243,7 @@ function drawRoughCanvas(scale = lastRoughScaleValue || 0) {
 
   const rect = roughCanvasEl.getBoundingClientRect();
   const fallbackRect = fontTesterMaskEl.getBoundingClientRect();
-  const renderScale = Math.min(2, window.devicePixelRatio || 1);
+  const renderScale = canvasRenderScale;
   const canvasWidth = Math.max(1, Math.round((rect.width || fallbackRect.width) * renderScale));
   const canvasHeight = Math.max(1, Math.round((rect.height || fallbackRect.height) * renderScale));
 
@@ -301,6 +322,13 @@ function drawRoughCanvas(scale = lastRoughScaleValue || 0) {
   }
 }
 
+function scheduleRoughCanvasUpdate(delay = 90) {
+  window.clearTimeout(roughCanvasUpdateTimer);
+  roughCanvasUpdateTimer = window.setTimeout(() => {
+    drawRoughCanvas();
+  }, delay);
+}
+
 function smoothNoise(value, seed) {
   const base = Math.floor(value);
   const t = value - base;
@@ -322,7 +350,7 @@ function drawMathmaticRoughCanvas() {
 
   const rect = roughCanvasEl.getBoundingClientRect();
   const fallbackRect = fontTesterMaskEl.getBoundingClientRect();
-  const renderScale = Math.min(2, window.devicePixelRatio || 1);
+  const renderScale = canvasRenderScale;
   const canvasWidth = Math.max(1, Math.round((rect.width || fallbackRect.width) * renderScale));
   const canvasHeight = Math.max(1, Math.round((rect.height || fallbackRect.height) * renderScale));
 
@@ -449,7 +477,7 @@ function appendLinePoints(points, target) {
   if (!points.length) return;
   const start = points[points.length - 1];
   const distance = Math.hypot(target.x - start.x, target.y - start.y);
-  const steps = Math.max(2, Math.ceil(distance / 3));
+  const steps = Math.max(2, Math.ceil(distance / 5));
   for (let i = 1; i <= steps; i++) {
     const t = i / steps;
     points.push({
@@ -466,7 +494,7 @@ function appendCubicPoints(points, cmd) {
     Math.hypot(cmd.x1 - start.x, cmd.y1 - start.y) +
     Math.hypot(cmd.x2 - cmd.x1, cmd.y2 - cmd.y1) +
     Math.hypot(cmd.x - cmd.x2, cmd.y - cmd.y2);
-  const steps = Math.max(12, Math.ceil(approxLength / 3));
+  const steps = Math.max(8, Math.ceil(approxLength / 5));
 
   for (let i = 1; i <= steps; i++) {
     const t = i / steps;
@@ -492,7 +520,7 @@ function appendQuadraticPoints(points, cmd) {
   const approxLength =
     Math.hypot(cmd.x1 - start.x, cmd.y1 - start.y) +
     Math.hypot(cmd.x - cmd.x1, cmd.y - cmd.y1);
-  const steps = Math.max(10, Math.ceil(approxLength / 3));
+  const steps = Math.max(6, Math.ceil(approxLength / 5));
 
   for (let i = 1; i <= steps; i++) {
     const t = i / steps;
@@ -590,6 +618,11 @@ function scheduleWrinkleTextUpdate(delay = 0) {
   wrinkleTextUpdateTimer = window.setTimeout(updateWrinkleText, delay);
 }
 
+function scheduleActiveTextLayerUpdate(delay = 90) {
+  window.clearTimeout(activeTextUpdateTimer);
+  activeTextUpdateTimer = window.setTimeout(updateActiveTextLayer, delay);
+}
+
 function updateActiveTextLayer() {
   if (activeAgingFont === "wrinkle") {
     scheduleWrinkleTextUpdate();
@@ -605,6 +638,12 @@ function updateActiveTextLayer() {
 }
 
 function updateAgeClock(now) {
+  if (now - lastClockUiTimestamp < clockUiFrameMs) {
+    requestAnimationFrame(updateAgeClock);
+    return;
+  }
+
+  lastClockUiTimestamp = now;
   const deltaSeconds = Math.max(0, (now - lastClockTimestamp) / 1000);
   acceleratedSeconds += deltaSeconds * timeSpeed;
   lastClockTimestamp = now;
@@ -615,18 +654,34 @@ function updateAgeClock(now) {
     .toString()
     .padStart(2, "0");
 
-  ageYearsEl.textContent = `${Math.floor(currentAgeYears)}y/o`;
-  ageDaysEl.textContent = formatCount(totalSeconds / 86400);
-  ageHoursEl.textContent = formatCount(totalSeconds / 3600);
-  ageSecondsEl.textContent = formatCount(totalSeconds);
-  ageSecondDecimalsEl.textContent = secondDecimals;
+  const nextAgeDisplayKey = [
+    Math.floor(currentAgeYears),
+    Math.floor(totalSeconds / 86400),
+    Math.floor(totalSeconds / 3600),
+    Math.floor(totalSeconds),
+    secondDecimals,
+  ].join("|");
+
+  if (nextAgeDisplayKey !== lastAgeDisplayKey) {
+    lastAgeDisplayKey = nextAgeDisplayKey;
+    ageYearsEl.textContent = `${Math.floor(currentAgeYears)}y/o`;
+    ageDaysEl.textContent = formatCount(totalSeconds / 86400);
+    ageHoursEl.textContent = formatCount(totalSeconds / 3600);
+    ageSecondsEl.textContent = formatCount(totalSeconds);
+    ageSecondDecimalsEl.textContent = secondDecimals;
+  }
+
   setAgingAxis(currentAgeYears);
-  fontTesterMaskEl?.classList.toggle("is-wrinkle", activeAgingFont === "wrinkle");
-  fontTesterMaskEl?.classList.toggle("is-rough", isRoughFont());
-  fontTesterMaskEl?.classList.toggle(
-    "is-wip",
-    activeAgingFont !== "wrinkle" && !isRoughFont() && currentAgeYears >= 100
-  );
+  const nextMaskClassKey = `${activeAgingFont}|${currentAgeYears >= 100}`;
+  if (nextMaskClassKey !== lastMaskClassKey) {
+    lastMaskClassKey = nextMaskClassKey;
+    fontTesterMaskEl?.classList.toggle("is-wrinkle", activeAgingFont === "wrinkle");
+    fontTesterMaskEl?.classList.toggle("is-rough", isRoughFont());
+    fontTesterMaskEl?.classList.toggle(
+      "is-wip",
+      activeAgingFont !== "wrinkle" && !isRoughFont() && currentAgeYears >= 100
+    );
+  }
 
   requestAnimationFrame(updateAgeClock);
 }
@@ -639,7 +694,9 @@ function resetToRebirth() {
   currentAgeYears = 0;
   totalCost = 0;
   lastFontAgingValue = null;
+  lastWrinkleAmount = null;
   lastRoughScaleValue = null;
+  lastRough2AgeBucket = null;
   lastRoughScaleTimestamp = 0;
 
   if (speedSliderEl) speedSliderEl.value = "0";
@@ -648,8 +705,10 @@ function resetToRebirth() {
 }
 
 updateWipTextLayer();
-drawRoughCanvas();
-document.fonts?.ready.then(() => drawRoughCanvas());
+if (isRoughFont()) {
+  drawRoughCanvas();
+  document.fonts?.ready.then(() => drawRoughCanvas());
+}
 requestAnimationFrame(updateAgeClock);
 
 speedSliderEl?.addEventListener("input", (event) => {
@@ -728,9 +787,7 @@ fontTesterEl?.addEventListener("paste", (event) => {
   event.preventDefault();
   const text = event.clipboardData.getData("text/plain").toUpperCase();
   document.execCommand("insertText", false, text);
-  window.setTimeout(() => {
-    updateActiveTextLayer();
-  }, 0);
+  scheduleActiveTextLayerUpdate(80);
 });
 
 fontTesterEl?.addEventListener("input", () => {
@@ -740,12 +797,12 @@ fontTesterEl?.addEventListener("input", () => {
   const upperText = fontTesterEl.textContent.toUpperCase();
 
   if (fontTesterEl.textContent === upperText) {
-    updateActiveTextLayer();
+    scheduleActiveTextLayerUpdate(110);
     return;
   }
 
   fontTesterEl.textContent = upperText;
-  updateActiveTextLayer();
+  scheduleActiveTextLayerUpdate(110);
 
   if (!selection) return;
 
@@ -758,7 +815,7 @@ fontTesterEl?.addEventListener("input", () => {
 });
 
 fontTesterEl?.addEventListener("keyup", () => {
-  updateActiveTextLayer();
+  scheduleActiveTextLayerUpdate(110);
 });
 
 scaleSliderEl?.addEventListener("input", (event) => {
@@ -769,6 +826,7 @@ scaleSliderEl?.addEventListener("input", (event) => {
   if (activeAgingFont === "wrinkle") {
     window.WrinkleLetters?.refreshLayout();
   } else if (isRoughFont()) {
-    drawRoughCanvas();
+    lastRough2Key = "";
+    scheduleRoughCanvasUpdate(90);
   }
 });

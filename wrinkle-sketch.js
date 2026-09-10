@@ -88,6 +88,7 @@ function exposeLetterApi() {
   window.WrinkleLetters = {
     setText(value) {
       const nextLetters = sanitizeLetters(value);
+      if (nextLetters.join("") === letters.join("")) return;
       letters = nextLetters;
       rebuildLetters();
     },
