@@ -1,0 +1,308 @@
+@font-face {
+  font-family: "ABC Diatype Mono";
+  src: url("libraries/ABCDiatypeMonoCondensed-Bold-Trial.otf")
+    format("opentype");
+  font-style: normal;
+  font-weight: 700;
+}
+
+@font-face {
+  font-family: "ABC Diatype Semi Mono";
+  src: url("libraries/ABCDiatypeSemi-MonoCondensed-Medium-Trial.otf")
+    format("opentype");
+  font-style: normal;
+  font-weight: 500;
+}
+
+:root {
+  --page-w: 1920;
+  --page-h: 1080;
+  --purple: #B700FF;
+  --mono: "ABC Diatype Mono", "Courier New", monospace;
+  --semi-mono: "ABC Diatype Semi Mono", "Courier New", monospace;
+  --thesis-nav-top: 287;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  width: 100%;
+  min-height: 100%;
+  margin: 0;
+  background: #fff;
+  color: #000;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: var(--mono);
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+.thesis-stage {
+  position: relative;
+  width: 100vw;
+  min-height: 100vh;
+  background: #fff;
+  padding-bottom: calc(120 / var(--page-h) * 100vh);
+}
+
+.thesis-stage::before {
+  position: fixed;
+  top: 0;
+  left: 50vw;
+  z-index: 8;
+  width: 0;
+  height: 100vh;
+  border-left: calc(1 / var(--page-h) * 100vh) solid #000;
+  pointer-events: none;
+  content: "";
+}
+
+.thesis-back {
+  position: fixed;
+  left: calc(18 / var(--page-w) * 100vw);
+  top: calc(20 / var(--page-h) * 100vh);
+  z-index: 10;
+  color: #000;
+  font-family: var(--semi-mono);
+  font-size: calc(38 / var(--page-h) * 100vh);
+  font-weight: 500;
+  line-height: 1;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.thesis-nav {
+  position: fixed;
+  left: calc(18 / var(--page-w) * 100vw);
+  top: calc(var(--thesis-nav-top) / var(--page-h) * 100vh);
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  gap: calc(2 / var(--page-h) * 100vh);
+  width: calc(720 / var(--page-w) * 100vw);
+  font-family: var(--semi-mono);
+  font-size: calc(20 / var(--page-h) * 100vh);
+  font-weight: 500;
+  line-height: 1.08;
+}
+
+.thesis-nav a {
+  color: #000;
+  text-decoration: none;
+  transition: color 120ms ease;
+}
+
+.thesis-nav a:hover {
+  color: var(--purple);
+}
+
+.thesis-header {
+  position: fixed;
+  left: calc(960 / var(--page-w) * 100vw);
+  top: calc(20 / var(--page-h) * 100vh);
+  right: calc(18 / var(--page-w) * 100vw);
+  z-index: 10;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: calc(56 / var(--page-w) * 100vw);
+  font-family: var(--semi-mono);
+  font-size: calc(31 / var(--page-h) * 100vh);
+  font-weight: 500;
+  line-height: 1.05;
+}
+
+.thesis-header h1,
+.thesis-header p {
+  margin: 0;
+  font: inherit;
+}
+
+.thesis-header p {
+  white-space: nowrap;
+}
+
+.thesis-content {
+  position: relative;
+  width: calc(958 / var(--page-w) * 100vw);
+  margin-left: 50vw;
+  padding-top: calc(254 / var(--page-h) * 100vh);
+}
+
+.thesis-section {
+  position: relative;
+  width: calc(760 / var(--page-w) * 100vw);
+  margin: 0 0 calc(32 / var(--page-h) * 100vh);
+  scroll-margin-top: calc(160 / var(--page-h) * 100vh);
+}
+
+#humans-letter,
+#digital-temporalities,
+#exploratory-experiments,
+#human-aging-experiments {
+  margin-top: calc(58 / var(--page-h) * 100vh);
+}
+
+.thesis-section::after {
+  display: block;
+  clear: both;
+  content: "";
+}
+
+.thesis-label,
+.thesis-section-heading {
+  margin: 0 0 calc(8 / var(--page-h) * 100vh);
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: calc(24 / var(--page-h) * 100vh);
+  font-weight: 700;
+  line-height: 1.22;
+}
+
+.thesis-label {
+  float: left;
+  margin: 0 calc(5 / var(--page-w) * 100vw) 0 0;
+}
+
+.thesis-section:not(.thesis-backmatter) > .thesis-section-heading {
+  float: left;
+  margin: 0 calc(5 / var(--page-w) * 100vw) 0 0;
+}
+
+.thesis-backmatter > .thesis-section-heading {
+  float: none;
+}
+
+.thesis-abstract::before,
+.thesis-section-heading::after {
+  position: absolute;
+  left: -50vw;
+  width: 100vw;
+  height: 0;
+  border-top: calc(1 / var(--page-h) * 100vh) solid #000;
+  content: "";
+}
+
+.thesis-abstract::before {
+  top: calc(-2 / var(--page-h) * 100vh);
+}
+
+.thesis-abstract {
+  padding-top: calc(30 / var(--page-h) * 100vh);
+}
+
+.thesis-abstract::before {
+  transform: translateY(calc(30 / var(--page-h) * 100vh));
+}
+
+.thesis-section-heading::after {
+  top: calc(-2 / var(--page-h) * 100vh);
+}
+
+.thesis-copy,
+.thesis-note {
+  margin: 0 0 calc(14 / var(--page-h) * 100vh);
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: calc(24 / var(--page-h) * 100vh);
+  font-weight: 400;
+  line-height: 1.22;
+  letter-spacing: 0;
+}
+
+.thesis-note {
+  font-family: var(--semi-mono);
+  font-size: calc(16 / var(--page-h) * 100vh);
+  font-weight: 500;
+  padding-left: calc(100 / var(--page-w) * 100vw);
+}
+
+.thesis-figure {
+  clear: both;
+  margin: calc(10 / var(--page-h) * 100vh) 0 calc(24 / var(--page-h) * 100vh);
+  width: calc(958 / var(--page-w) * 100vw);
+}
+
+.thesis-figure-frame {
+  position: relative;
+  height: calc(469 / var(--page-h) * 100vh);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border: calc(0.5 / var(--page-h) * 100vh) solid #000;
+  background: #fff;
+}
+
+.thesis-figure-frame::before {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' preserveAspectRatio='none' viewBox='0 0 100 100'%3E%3Cline x1='0' y1='0' x2='100' y2='100' stroke='black' stroke-width='0.35' vector-effect='non-scaling-stroke'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-size: 100% 100%;
+  pointer-events: none;
+  content: "";
+  transition: opacity 120ms ease;
+}
+
+.thesis-image {
+  position: relative;
+  z-index: 2;
+  height: 90%;
+  width: auto;
+  max-width: 96%;
+  object-fit: contain;
+  opacity: 0;
+  transition: opacity 120ms ease;
+}
+
+.thesis-figure:hover .thesis-image {
+  opacity: 1;
+}
+
+.thesis-figure:hover .thesis-figure-frame::before {
+  opacity: 0;
+}
+
+.thesis-figure figcaption,
+.thesis-caption-text {
+  margin: calc(7 / var(--page-h) * 100vh) 0 0;
+  color: #999;
+  font-family: var(--semi-mono);
+  font-size: calc(14 / var(--page-h) * 100vh);
+  font-weight: 500;
+  line-height: 1.18;
+}
+
+.footnote-ref {
+  color: var(--purple);
+  cursor: help;
+  font-family: var(--semi-mono);
+  font-weight: 500;
+  font-size: 0.62em;
+  line-height: 0;
+  vertical-align: super;
+}
+
+.footnote-ref:hover::after {
+  position: fixed;
+  left: calc(18 / var(--page-w) * 100vw);
+  bottom: calc(22 / var(--page-h) * 100vh);
+  z-index: 20;
+  width: calc(620 / var(--page-w) * 100vw);
+  color: var(--purple);
+  font-family: var(--semi-mono);
+  font-size: calc(13 / var(--page-h) * 100vh);
+  font-weight: 500;
+  line-height: 1.2;
+  pointer-events: none;
+  content: attr(data-footnote);
+}

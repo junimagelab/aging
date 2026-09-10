@@ -10,7 +10,7 @@
   <body>
     <main class="stage" aria-label="Download Font layout">
       <svg class="rough-skin-filter" width="0" height="0" aria-hidden="true" focusable="false">
-        <filter id="rough-skin-effect-30" x="-4%" y="-4%" width="108%" height="108%" filterRes="180">
+        <filter id="rough-skin-effect-30" x="-18%" y="-18%" width="136%" height="136%">
           <feTurbulence
             type="fractalNoise"
             baseFrequency="0.018 0.12"
@@ -25,6 +25,27 @@
             scale="0"
             xChannelSelector="R"
             yChannelSelector="G"
+            result="roughDisplaced"
+          />
+          <feGaussianBlur
+            in="roughDisplaced"
+            stdDeviation="0.2 0"
+            result="roughSoftened"
+          />
+          <feMorphology
+            in="roughSoftened"
+            operator="dilate"
+            radius="0.85 0"
+            result="roughJoined"
+          />
+          <feColorMatrix
+            in="roughJoined"
+            type="matrix"
+            values="
+              1 0 0 0 0
+              0 1 0 0 0
+              0 0 1 0 0
+              0 0 0 18 -7"
           />
         </filter>
       </svg>
@@ -79,7 +100,8 @@
           <p class="aging-option" data-aging-font="wrinkle" role="button" tabindex="0" aria-pressed="false"><span>(2)Wrinkle<sup>1</sup></span><span class="check-box">[<span class="purple-dot is-hidden"></span>]</span></p>
           <p class="aging-option" data-aging-font="hunched" role="button" tabindex="0" aria-pressed="false"><span>Hunched Back<sup>2</sup></span><span class="check-box">[<span class="purple-dot is-hidden"></span>]</span></p>
           <p class="aging-option is-active" data-aging-font="skin" role="button" tabindex="0" aria-pressed="true"><span>Elasticity<sup>3</sup></span><span class="check-box">[<span class="purple-dot"></span>]</span></p>
-          <p class="aging-option" data-aging-font="rough" role="button" tabindex="0" aria-pressed="false"><span>Rough Skin<sup>4</sup></span><span class="check-box">[<span class="purple-dot is-hidden"></span>]</span></p>
+          <p class="aging-option" data-aging-font="rough" role="button" tabindex="0" aria-pressed="false"><span>Rough Skin 1<sup>4</sup></span><span class="check-box">[<span class="purple-dot is-hidden"></span>]</span></p>
+          <p class="aging-option" data-aging-font="rough2" role="button" tabindex="0" aria-pressed="false"><span>Rough Skin 2<sup>4</sup></span><span class="check-box">[<span class="purple-dot is-hidden"></span>]</span></p>
         </div>
 
         <div class="control">
@@ -103,18 +125,15 @@
 
         <div class="younger">
           <p>(4)Getting Younger</p>
-          <p class="younger-action" data-cost="10" data-years="10"><span>-Medicine</span><span>10$</span></p>
-          <p class="younger-action" data-cost="5" data-years="5"><span>-Skin Care</span><span>5$</span></p>
-          <p class="younger-action" data-cost="8" data-years="8"><span>-Running</span><span>8$</span></p>
-          <p class="younger-action" data-cost="3" data-years="3"><span>-Fresh Air</span><span>3$</span></p>
-          <p class="younger-total"><span>Total</span><span id="younger-total-cost">0$</span></p>
-          <div class="payment-options" aria-label="Payment options">
-            <span>[Card]</span>
-            <span>[Twint]</span>
-          </div>
+          <p class="younger-action" data-cost="10" data-years="10"><span>-Medicine</span></p>
+          <p class="younger-action" data-cost="5" data-years="5"><span>-Skin Care</span></p>
+          <p class="younger-action" data-cost="8" data-years="8"><span>-Running</span></p>
+          <p class="younger-action" data-cost="3" data-years="3"><span>-Fresh Air</span></p>
+          <p class="rebirth-action" role="button" tabindex="0">(5) Rebirth</p>
+          <p class="thesis-action" role="button" tabindex="0">(6) Read Thesis</p>
         </div>
 
-        <div class="download">Download Font</div>
+        <div class="download" role="button" tabindex="0">Print aging</div>
 
         <div class="scale-text">
           <span>Scale</span>

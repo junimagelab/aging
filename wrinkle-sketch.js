@@ -7,8 +7,12 @@ let clipLayer;
 let wrinkleLayer;
 let glyphs = [];
 let wrinkleSegments = [];
+let rebuildTimer = 0;
+const wrinkleGlyphCache = new Map();
 
 const GLYPH_SIZE = 172;
+const WRINKLE_WEIGHT_MULTIPLIER = 0.8;
+const REBUILD_DELAY_MS = 120;
 const SUPPORTED_LETTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ!?";
 const DEFAULT_LETTERS = SUPPORTED_LETTERS.split("");
 const FONT_PATH = "libraries/ABCOracle-Bold.otf";
@@ -31,11 +35,11 @@ function setup() {
   canvas.class("wrinkle-canvas");
   canvas.parent(wrinkleHostEl);
   pixelDensity(1);
+  noLoop();
 
   textFont(oracleFont);
   configureFromUrl();
-  buildGlyphs();
-  buildWrinkleSystem();
+  rebuildLetters();
   exposeLetterApi();
 }
 
@@ -57,8 +61,9 @@ function setupControls() {
   amountSlider = createSlider(0, 100, wrinkleAmount, 1);
   amountSlider.class("wrinkle-slider");
   amountSlider.input(() => {
-    wrinkleAmount = amountSlider.value();
+    wrinkleAmount = round(amountSlider.value());
     amountLabel.html(`Wrinkle ${wrinkleAmount}`);
+    redraw();
   });
 
   panel.child(label);
@@ -82,19 +87,23 @@ function configureFromUrl() {
 function exposeLetterApi() {
   window.WrinkleLetters = {
     setText(value) {
-      letters = sanitizeLetters(value);
+      const nextLetters = sanitizeLetters(value);
+      letters = nextLetters;
       rebuildLetters();
     },
     setAmount(value) {
-      wrinkleAmount = constrain(Number(value) || 0, 0, 100);
+      const nextAmount = round(constrain(Number(value) || 0, 0, 100));
+      if (nextAmount === wrinkleAmount) return;
+      wrinkleAmount = nextAmount;
       if (amountSlider) amountSlider.value(wrinkleAmount);
       if (amountLabel) amountLabel.html(`Wrinkle ${wrinkleAmount}`);
+      redraw();
     },
     getText() {
       return letters.join("");
     },
     refreshLayout() {
-      rebuildLetters();
+      scheduleRebuild();
     },
     supported: SUPPORTED_LETTERS,
   };
@@ -112,6 +121,18 @@ function sanitizeLetters(value) {
 function rebuildLetters() {
   buildGlyphs();
   buildWrinkleSystem();
+  redraw();
+}
+
+function scheduleRebuild(delay = REBUILD_DELAY_MS) {
+  window.clearTimeout(rebuildTimer);
+  rebuildTimer = window.setTimeout(() => {
+    rebuildLetters();
+  }, delay);
+}
+
+function windowResized() {
+  scheduleRebuild(80);
 }
 
 function syncLayoutMetrics() {
@@ -139,7 +160,7 @@ function getCanvasSize() {
 
   return {
     width: max(1, floor(rect?.width || 1)),
-    height: max(1, floor((rect?.height || 1) - window.innerHeight * 0.01)),
+    height: max(1, floor(rect?.height || 1)),
   };
 }
 
@@ -166,6 +187,8 @@ function buildGlyphs() {
   clipLayer.textFont(oracleFont);
   clipLayer.textSize(currentGlyphSize);
   clipLayer.textAlign(LEFT, BASELINE);
+  textFont(oracleFont);
+  textSize(currentGlyphSize);
 
   let cursorX = 0;
   let cursorY = 0;
@@ -184,38 +207,49 @@ function buildGlyphs() {
     }
 
     const bbox = oracleFont.textBounds(letter, 0, 0, currentGlyphSize);
-    if (cursorX > 0 && cursorX + bbox.w > width) {
+    const advance = textWidth(letter);
+    const layoutAdvance = getLayoutAdvance(bbox, advance);
+    if (cursorX > 0 && cursorX + layoutAdvance > width) {
       cursorX = 0;
       cursorY += currentLineHeight;
     }
 
     if (cursorY > height) break;
 
-    const x = cursorX - bbox.x;
-    const y = cursorY - bbox.y;
-    const glyph = {
-      letter,
-      x: x + bbox.x,
-      y: y + bbox.y,
-      w: bbox.w,
-      h: bbox.h,
-      baselineX: x,
-      baselineY: y,
-      clip: {
-        x: x + bbox.x - 10,
-        y: y + bbox.y - 10,
-        w: bbox.w + 20,
-        h: bbox.h + 20,
-      },
-    };
-
-    glyphs.push(glyph);
-    maskLayer.text(letter, x, y);
-    clipLayer.text(letter, x, y);
-    cursorX += bbox.w + currentLetterSpacing;
+    addGlyphFromBox(letter, cursorX, cursorY);
+    cursorX += layoutAdvance;
   }
 
   maskLayer.loadPixels();
+}
+
+function getLayoutAdvance(bbox, advance) {
+  return advance + currentLetterSpacing;
+}
+
+function addGlyphFromBox(letter, boxX, boxY) {
+  const bbox = oracleFont.textBounds(letter, 0, 0, currentGlyphSize);
+  const baselineX = boxX - bbox.x;
+  const baselineY = boxY - bbox.y;
+  const glyph = {
+    letter,
+    x: baselineX + bbox.x,
+    y: baselineY + bbox.y,
+    w: bbox.w,
+    h: bbox.h,
+    baselineX,
+    baselineY,
+    clip: {
+      x: baselineX + bbox.x - 10,
+      y: baselineY + bbox.y - 10,
+      w: bbox.w + 20,
+      h: bbox.h + 20,
+    },
+  };
+
+  glyphs.push(glyph);
+  maskLayer.text(letter, baselineX, baselineY);
+  clipLayer.text(letter, baselineX, baselineY);
 }
 
 function buildWrinkleSystem() {
@@ -232,8 +266,22 @@ function buildWrinkleSystem() {
 }
 
 function buildGlyphWrinkles(b) {
+  const cacheKey = getWrinkleCacheKey(b);
+  const cachedSegments = wrinkleGlyphCache.get(cacheKey);
+  if (cachedSegments) {
+    appendCachedGlyphWrinkles(cachedSegments, b);
+    return;
+  }
+
+  const segmentStart = wrinkleSegments.length;
+  const seed = getCacheSeed(cacheKey);
+  randomSeed(seed);
+  noiseSeed(seed);
   const skeleton = computeGlyphSkeleton(b);
-  if (!skeleton) return;
+  if (!skeleton) {
+    wrinkleGlyphCache.set(cacheKey, []);
+    return;
+  }
 
   addScanlineCenterCreases(skeleton);
   addSkeletonCreases(skeleton);
@@ -255,6 +303,51 @@ function buildGlyphWrinkles(b) {
       radius: max(b.w, b.h) * random(0.12, 0.22),
       angles,
       clip: b.clip,
+    });
+  }
+
+  wrinkleGlyphCache.set(
+    cacheKey,
+    wrinkleSegments.slice(segmentStart).map((segment) => ({
+      points: segment.points.map((point) => ({
+        x: point.x - b.x,
+        y: point.y - b.y,
+      })),
+      start: segment.start,
+      end: segment.end,
+      weight: segment.weight,
+      kind: segment.kind,
+      glyphSize: currentGlyphSize,
+    }))
+  );
+}
+
+function getWrinkleCacheKey(glyph) {
+  return glyph.letter;
+}
+
+function getCacheSeed(value) {
+  let hash = 2166136261;
+  for (let i = 0; i < value.length; i++) {
+    hash ^= value.charCodeAt(i);
+    hash = Math.imul(hash, 16777619);
+  }
+  return hash >>> 0;
+}
+
+function appendCachedGlyphWrinkles(cachedSegments, glyph) {
+  for (const segment of cachedSegments) {
+    const scale = currentGlyphSize / (segment.glyphSize || GLYPH_SIZE);
+    wrinkleSegments.push({
+      points: segment.points.map((point) => ({
+        x: glyph.x + point.x * scale,
+        y: glyph.y + point.y * scale,
+      })),
+      start: segment.start,
+      end: segment.end,
+      weight: segment.weight,
+      clip: glyph.clip,
+      kind: segment.kind,
     });
   }
 }
@@ -285,8 +378,8 @@ function drawWrinkleLayer(amount) {
       wrinkleLayer,
       segment,
       local,
-      color(255, 205 * local),
-      segment.weight * 1.45
+      color(255),
+      getWrinkleWeight(segment.weight)
     );
   }
 
@@ -297,6 +390,11 @@ function drawWrinkleLayer(amount) {
   ctx.restore();
 
   image(wrinkleLayer, 0, 0);
+}
+
+function getWrinkleWeight(weight) {
+  const sizeScale = max(1, currentGlyphSize / GLYPH_SIZE);
+  return weight * 1.45 * WRINKLE_WEIGHT_MULTIPLIER * sizeScale;
 }
 
 function drawInterface() {

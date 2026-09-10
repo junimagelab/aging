@@ -1,6 +1,20 @@
 const mainCounterEl = document.querySelector("#main-counter");
 const mainBackgroundEl = document.querySelector(".main-background");
 const mainStartedAt = performance.now();
+const inactivityRefreshMs = 3 * 60 * 1000;
+let inactivityRefreshTimer = 0;
+
+function resetInactivityRefreshTimer() {
+  window.clearTimeout(inactivityRefreshTimer);
+  inactivityRefreshTimer = window.setTimeout(() => {
+    window.location.reload();
+  }, inactivityRefreshMs);
+}
+
+["click", "input", "keydown", "pointerdown"].forEach((eventName) => {
+  window.addEventListener(eventName, resetInactivityRefreshTimer, { passive: true });
+});
+resetInactivityRefreshTimer();
 
 localStorage.removeItem("measuredName");
 localStorage.removeItem("measuredAge");
