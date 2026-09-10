@@ -73,16 +73,23 @@ let wrinkleTextUpdateTimer = 0;
 let activeTextUpdateTimer = 0;
 let roughCanvasUpdateTimer = 0;
 let isPrintPending = false;
-let lastPrintRequestTimestamp = -Infinity;
-let printSnapshotEl = null;
+let isPrintDialogPending = false;
+let lastPrintDialogTimestamp = -Infinity;
+let printImageStageEl = null;
 let mathmaticFont = null;
 const mathmaticGlyphCache = new Map();
+const printImagePaths = [
+  "libraries/1/1.png",
+  "libraries/1/2.png",
+  "libraries/1/3.png",
+];
+const printImageCache = new Map();
 const maxTimeSpeed = yearSeconds * 2;
 const roughScaleFrameMs = 320;
 const clockDisplayFrameMs = 33;
 const agingEffectFrameMs = 180;
-const printCooldownMs = 10000;
 const canvasRenderScale = 1;
+const printDialogCooldownMs = 10000;
 const agingFonts = {
   wrinkle: {
     axisMax: 100,
@@ -123,6 +130,8 @@ if (window.p5) {
     };
   });
 }
+
+preloadPrintImages();
 
 function setAgingAxis(ageValue) {
   const activeFont = agingFonts[activeAgingFont] || agingFonts.skin;
@@ -771,122 +780,78 @@ function printAgedLetter(event) {
   event?.preventDefault();
   event?.stopPropagation();
 
-  if (isPrintPending || !fontTesterMaskEl || !fontTesterEl) return;
+  if (isPrintPending || isPrintDialogPending) return;
 
   const now = performance.now();
-  if (now - lastPrintRequestTimestamp < printCooldownMs) return;
+  if (now - lastPrintDialogTimestamp < printDialogCooldownMs) return;
+
+  const printImage = pickRandomPrintImage();
+  if (!printImage) {
+    window.alert("Print images are not connected yet.");
+    return;
+  }
 
   isPrintPending = true;
-  lastPrintRequestTimestamp = now;
-  updateActiveTextLayer();
-  if (activeAgingFont === "wrinkle") {
-    window.WrinkleLetters?.refreshLayout();
-  }
-  createPrintSnapshot();
+  isPrintDialogPending = true;
+  lastPrintDialogTimestamp = now;
+  showPrintImage(printImage);
   window.print();
 
   window.setTimeout(() => {
     isPrintPending = false;
-  }, printCooldownMs);
+    isPrintDialogPending = false;
+  }, printDialogCooldownMs);
 }
 
-function removePrintSnapshot() {
-  printSnapshotEl?.remove();
-  printSnapshotEl = null;
-}
-
-function createPrintSnapshot() {
-  removePrintSnapshot();
-
-  const maskRect = fontTesterMaskEl.getBoundingClientRect();
-  const snapshotScale = Math.min(2, Math.max(1, window.devicePixelRatio || 1));
-  const snapshotCanvas = document.createElement("canvas");
-  snapshotCanvas.width = Math.max(1, Math.round(maskRect.width * snapshotScale));
-  snapshotCanvas.height = Math.max(1, Math.round(maskRect.height * snapshotScale));
-
-  const ctx = snapshotCanvas.getContext("2d");
-  if (!ctx) return;
-
-  ctx.scale(snapshotScale, snapshotScale);
-  ctx.fillStyle = "#fff";
-  ctx.fillRect(0, 0, maskRect.width, maskRect.height);
-
-  const visibleCanvas = getVisiblePrintCanvas();
-  if (visibleCanvas) {
-    const canvasRect = visibleCanvas.getBoundingClientRect();
-    ctx.drawImage(
-      visibleCanvas,
-      canvasRect.left - maskRect.left,
-      canvasRect.top - maskRect.top,
-      canvasRect.width,
-      canvasRect.height
-    );
-  } else {
-    drawTextPrintFallback(ctx, maskRect);
-  }
-
-  printSnapshotEl = document.createElement("div");
-  printSnapshotEl.className = "print-snapshot";
-  printSnapshotEl.setAttribute("aria-hidden", "true");
-
-  const image = document.createElement("img");
-  image.alt = "";
-  image.src = snapshotCanvas.toDataURL("image/png");
-  printSnapshotEl.append(image);
-  document.body.append(printSnapshotEl);
-}
-
-function getVisiblePrintCanvas() {
-  return Array.from(fontTesterMaskEl.querySelectorAll("canvas")).find((canvas) => {
-    const style = getComputedStyle(canvas);
-    return (
-      style.display !== "none" &&
-      style.visibility !== "hidden" &&
-      Number.parseFloat(style.opacity || "1") > 0 &&
-      canvas.width > 1 &&
-      canvas.height > 1
-    );
+function preloadPrintImages() {
+  printImagePaths.forEach((path) => {
+    const image = new Image();
+    image.src = path;
+    printImageCache.set(path, image);
   });
 }
 
-function drawTextPrintFallback(ctx, maskRect) {
-  const computed = getComputedStyle(fontTesterEl);
-  const text = fontTesterEl.textContent || "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-  const fontSize = Number.parseFloat(computed.fontSize) || 120;
-  const lineHeight = Number.parseFloat(computed.lineHeight) || fontSize * 1.05;
-  const letterSpacing = Number.parseFloat(computed.letterSpacing) || 0;
-  const testerRect = fontTesterEl.getBoundingClientRect();
-  const xStart = testerRect.left - maskRect.left;
-  let x = xStart;
-  let y = testerRect.top - maskRect.top;
+function pickRandomPrintImage() {
+  if (!printImagePaths.length) return null;
 
-  ctx.fillStyle = computed.color === "rgba(0, 0, 0, 0)" ? "#000" : computed.color;
-  ctx.font = `${computed.fontWeight} ${fontSize}px ${computed.fontFamily}`;
-  ctx.textBaseline = "top";
+  const path = printImagePaths[Math.floor(Math.random() * printImagePaths.length)];
+  const cachedImage = printImageCache.get(path);
 
-  for (const character of text) {
-    if (character === "\n") {
-      x = xStart;
-      y += lineHeight;
-      continue;
-    }
+  return cachedImage?.complete ? cachedImage : { src: path };
+}
 
-    const advance = ctx.measureText(character).width + letterSpacing;
-    if (character !== " " && x > xStart && x + advance > maskRect.width) {
-      x = xStart;
-      y += lineHeight;
-    }
+function showPrintImage(image) {
+  removePrintImage();
 
-    ctx.fillText(character, x, y);
-    x += character === " " ? fontSize * 0.55 + letterSpacing : advance;
-  }
+  printImageStageEl = document.createElement("div");
+  printImageStageEl.className = "print-image-stage";
+  printImageStageEl.setAttribute("aria-hidden", "true");
+  printImageStageEl.addEventListener("click", removePrintImage);
+
+  const printImageEl = document.createElement("img");
+  printImageEl.alt = "";
+  printImageEl.src = image.src;
+  printImageStageEl.append(printImageEl);
+  document.body.append(printImageStageEl);
+}
+
+function removePrintImage() {
+  printImageStageEl?.remove();
+  printImageStageEl = null;
 }
 
 window.addEventListener("afterprint", () => {
-  removePrintSnapshot();
+  removePrintImage();
   window.setTimeout(() => {
-    isPrintPending = false;
-  }, printCooldownMs);
+    isPrintDialogPending = false;
+  }, printDialogCooldownMs);
+  isPrintPending = false;
+});
+
+window.addEventListener("keydown", (event) => {
+  if (event.key === "Escape") {
+    removePrintImage();
+  }
 });
 
 printActionEl?.addEventListener("click", printAgedLetter);
