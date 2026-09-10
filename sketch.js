@@ -65,7 +65,8 @@ let lastRoughScaleValue = null;
 let lastRough2AgeBucket = null;
 let lastRough2Key = "";
 let lastRoughScaleTimestamp = 0;
-let lastClockUiTimestamp = 0;
+let lastClockDisplayTimestamp = 0;
+let lastAgingEffectTimestamp = 0;
 let lastAgeDisplayKey = "";
 let lastMaskClassKey = "";
 let wrinkleTextUpdateTimer = 0;
@@ -76,7 +77,8 @@ let mathmaticFont = null;
 const mathmaticGlyphCache = new Map();
 const maxTimeSpeed = yearSeconds * 2;
 const roughScaleFrameMs = 320;
-const clockUiFrameMs = 180;
+const clockDisplayFrameMs = 33;
+const agingEffectFrameMs = 180;
 const canvasRenderScale = 1;
 const agingFonts = {
   wrinkle: {
@@ -638,49 +640,50 @@ function updateActiveTextLayer() {
 }
 
 function updateAgeClock(now) {
-  if (now - lastClockUiTimestamp < clockUiFrameMs) {
-    requestAnimationFrame(updateAgeClock);
-    return;
-  }
-
-  lastClockUiTimestamp = now;
   const deltaSeconds = Math.max(0, (now - lastClockTimestamp) / 1000);
   acceleratedSeconds += deltaSeconds * timeSpeed;
   lastClockTimestamp = now;
 
   const totalSeconds = Math.max(0, initialAgeSeconds + acceleratedSeconds + ageOffsetSeconds);
   currentAgeYears = totalSeconds / yearSeconds;
-  const secondDecimals = Math.floor((totalSeconds % 1) * 100)
-    .toString()
-    .padStart(2, "0");
 
-  const nextAgeDisplayKey = [
-    Math.floor(currentAgeYears),
-    Math.floor(totalSeconds / 86400),
-    Math.floor(totalSeconds / 3600),
-    Math.floor(totalSeconds),
-    secondDecimals,
-  ].join("|");
+  if (now - lastClockDisplayTimestamp >= clockDisplayFrameMs) {
+    lastClockDisplayTimestamp = now;
+    const secondDecimals = Math.floor((totalSeconds % 1) * 100)
+      .toString()
+      .padStart(2, "0");
 
-  if (nextAgeDisplayKey !== lastAgeDisplayKey) {
-    lastAgeDisplayKey = nextAgeDisplayKey;
-    ageYearsEl.textContent = `${Math.floor(currentAgeYears)}y/o`;
-    ageDaysEl.textContent = formatCount(totalSeconds / 86400);
-    ageHoursEl.textContent = formatCount(totalSeconds / 3600);
-    ageSecondsEl.textContent = formatCount(totalSeconds);
-    ageSecondDecimalsEl.textContent = secondDecimals;
+    const nextAgeDisplayKey = [
+      Math.floor(currentAgeYears),
+      Math.floor(totalSeconds / 86400),
+      Math.floor(totalSeconds / 3600),
+      Math.floor(totalSeconds),
+      secondDecimals,
+    ].join("|");
+
+    if (nextAgeDisplayKey !== lastAgeDisplayKey) {
+      lastAgeDisplayKey = nextAgeDisplayKey;
+      ageYearsEl.textContent = `${Math.floor(currentAgeYears)}y/o`;
+      ageDaysEl.textContent = formatCount(totalSeconds / 86400);
+      ageHoursEl.textContent = formatCount(totalSeconds / 3600);
+      ageSecondsEl.textContent = formatCount(totalSeconds);
+      ageSecondDecimalsEl.textContent = secondDecimals;
+    }
   }
 
-  setAgingAxis(currentAgeYears);
-  const nextMaskClassKey = `${activeAgingFont}|${currentAgeYears >= 100}`;
-  if (nextMaskClassKey !== lastMaskClassKey) {
-    lastMaskClassKey = nextMaskClassKey;
-    fontTesterMaskEl?.classList.toggle("is-wrinkle", activeAgingFont === "wrinkle");
-    fontTesterMaskEl?.classList.toggle("is-rough", isRoughFont());
-    fontTesterMaskEl?.classList.toggle(
-      "is-wip",
-      activeAgingFont !== "wrinkle" && !isRoughFont() && currentAgeYears >= 100
-    );
+  if (now - lastAgingEffectTimestamp >= agingEffectFrameMs) {
+    lastAgingEffectTimestamp = now;
+    setAgingAxis(currentAgeYears);
+    const nextMaskClassKey = `${activeAgingFont}|${currentAgeYears >= 100}`;
+    if (nextMaskClassKey !== lastMaskClassKey) {
+      lastMaskClassKey = nextMaskClassKey;
+      fontTesterMaskEl?.classList.toggle("is-wrinkle", activeAgingFont === "wrinkle");
+      fontTesterMaskEl?.classList.toggle("is-rough", isRoughFont());
+      fontTesterMaskEl?.classList.toggle(
+        "is-wip",
+        activeAgingFont !== "wrinkle" && !isRoughFont() && currentAgeYears >= 100
+      );
+    }
   }
 
   requestAnimationFrame(updateAgeClock);
@@ -698,6 +701,10 @@ function resetToRebirth() {
   lastRoughScaleValue = null;
   lastRough2AgeBucket = null;
   lastRoughScaleTimestamp = 0;
+  lastClockDisplayTimestamp = 0;
+  lastAgingEffectTimestamp = 0;
+  lastAgeDisplayKey = "";
+  lastMaskClassKey = "";
 
   if (speedSliderEl) speedSliderEl.value = "0";
   if (youngerTotalCostEl) youngerTotalCostEl.textContent = "0$";
