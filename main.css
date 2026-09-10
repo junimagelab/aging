@@ -151,6 +151,8 @@ body {
 .main-card-stage {
   width: 100%;
   aspect-ratio: 427.98 / 660.44;
+  transform-origin: center center;
+  transition: transform 760ms cubic-bezier(0.2, 0.9, 0.2, 1);
 }
 
 .main-card-inner {
@@ -162,11 +164,19 @@ body {
 }
 
 .main-card.is-flipped .main-card-inner {
-  transform: translateY(-1.1vh) translateZ(7vw) rotateY(180deg);
+  transform: rotateY(180deg);
+}
+
+.main-card.is-flipped .main-card-stage {
+  transform: translateY(-1.1vh) scale(1.12);
 }
 
 .main-card:not(.is-flipped):active .main-card-inner {
-  transform: translateY(-0.45vh) translateZ(3vw) rotateY(8deg);
+  transform: rotateY(8deg);
+}
+
+.main-card:not(.is-flipped):active .main-card-stage {
+  transform: translateY(-0.45vh) scale(1.04);
 }
 
 .main-card-face {
