@@ -73,12 +73,14 @@ let wrinkleTextUpdateTimer = 0;
 let activeTextUpdateTimer = 0;
 let roughCanvasUpdateTimer = 0;
 let isPrintPending = false;
+let lastPrintRequestTimestamp = -Infinity;
 let mathmaticFont = null;
 const mathmaticGlyphCache = new Map();
 const maxTimeSpeed = yearSeconds * 2;
 const roughScaleFrameMs = 320;
 const clockDisplayFrameMs = 33;
 const agingEffectFrameMs = 180;
+const printCooldownMs = 10000;
 const canvasRenderScale = 1;
 const agingFonts = {
   wrinkle: {
@@ -764,9 +766,17 @@ thesisActionEl?.addEventListener("keydown", (event) => {
   openThesisPage();
 });
 
-function printAgedLetter() {
+function printAgedLetter(event) {
+  event?.preventDefault();
+  event?.stopPropagation();
+
   if (isPrintPending || !fontTesterMaskEl || !fontTesterEl) return;
+
+  const now = performance.now();
+  if (now - lastPrintRequestTimestamp < printCooldownMs) return;
+
   isPrintPending = true;
+  lastPrintRequestTimestamp = now;
   updateActiveTextLayer();
   if (activeAgingFont === "wrinkle") {
     window.WrinkleLetters?.refreshLayout();
@@ -775,19 +785,21 @@ function printAgedLetter() {
 
   window.setTimeout(() => {
     isPrintPending = false;
-  }, 1200);
+  }, printCooldownMs);
 }
 
 window.addEventListener("afterprint", () => {
-  isPrintPending = false;
+  window.setTimeout(() => {
+    isPrintPending = false;
+  }, printCooldownMs);
 });
 
 printActionEl?.addEventListener("click", printAgedLetter);
 printActionEl?.addEventListener("keydown", (event) => {
   if (event.key !== "Enter" && event.key !== " ") return;
+  if (event.repeat) return;
 
-  event.preventDefault();
-  printAgedLetter();
+  printAgedLetter(event);
 });
 
 fontTesterEl?.addEventListener("paste", (event) => {
