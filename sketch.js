@@ -77,11 +77,10 @@ let isPrintDialogPending = false;
 let lastPrintDialogTimestamp = -Infinity;
 let mathmaticFont = null;
 const mathmaticGlyphCache = new Map();
-const printImagePaths = [
-  "libraries/1/1.png",
-  "libraries/1/2.png",
-  "libraries/1/3.png",
-];
+const printImagePaths = Array.from(
+  { length: 25 },
+  (_, index) => `libraries/1/${index + 1}.png`
+);
 const printImageCache = new Map();
 const maxTimeSpeed = yearSeconds * 2;
 const roughScaleFrameMs = 320;
@@ -133,6 +132,11 @@ if (window.p5) {
 preloadPrintImages();
 
 function setAgingAxis(ageValue) {
+  if (isDeathAge(ageValue)) {
+    updateWipTextLayer();
+    return;
+  }
+
   const activeFont = agingFonts[activeAgingFont] || agingFonts.skin;
   const axisMax = activeFont.axisMax;
   const maxAge = activeFont.maxAge || 90;
@@ -185,6 +189,20 @@ function isRoughFont() {
   return activeAgingFont === "rough" || activeAgingFont === "rough2";
 }
 
+function isDeathAge(ageValue = currentAgeYears) {
+  return ageValue >= 100;
+}
+
+function updateFontMaskClasses(ageValue = currentAgeYears) {
+  const showWip = isDeathAge(ageValue);
+
+  if (showWip) updateWipTextLayer();
+
+  fontTesterMaskEl?.classList.toggle("is-wrinkle", activeAgingFont === "wrinkle" && !showWip);
+  fontTesterMaskEl?.classList.toggle("is-rough", isRoughFont() && !showWip);
+  fontTesterMaskEl?.classList.toggle("is-wip", showWip);
+}
+
 function selectAgingFont(fontName) {
   if (!agingFonts[fontName] || !fontTesterEl) return;
 
@@ -203,12 +221,7 @@ function selectAgingFont(fontName) {
     option.querySelector(".purple-dot")?.classList.toggle("is-hidden", !isActive);
   });
 
-  fontTesterMaskEl?.classList.toggle("is-wrinkle", activeAgingFont === "wrinkle");
-  fontTesterMaskEl?.classList.toggle("is-rough", isRoughFont());
-  fontTesterMaskEl?.classList.toggle(
-    "is-wip",
-    activeAgingFont !== "wrinkle" && !isRoughFont() && currentAgeYears >= 100
-  );
+  updateFontMaskClasses();
   setAgingAxis(currentAgeYears);
   updateWrinkleText();
 }
@@ -622,6 +635,10 @@ function updateWrinkleFrame(textValue, amountValue) {
 
 function updateWrinkleText() {
   if (activeAgingFont !== "wrinkle") return;
+  if (isDeathAge()) {
+    updateWipTextLayer();
+    return;
+  }
   updateWrinkleFrame(fontTesterEl?.textContent || "ABCDEFGHIJKLMNOPQRSTUVWXYZ", null);
 }
 
@@ -637,6 +654,11 @@ function scheduleActiveTextLayerUpdate(delay = 90) {
 }
 
 function updateActiveTextLayer() {
+  if (isDeathAge()) {
+    updateWipTextLayer();
+    return;
+  }
+
   if (activeAgingFont === "wrinkle") {
     scheduleWrinkleTextUpdate();
     return;
@@ -688,12 +710,7 @@ function updateAgeClock(now) {
     const nextMaskClassKey = `${activeAgingFont}|${currentAgeYears >= 100}`;
     if (nextMaskClassKey !== lastMaskClassKey) {
       lastMaskClassKey = nextMaskClassKey;
-      fontTesterMaskEl?.classList.toggle("is-wrinkle", activeAgingFont === "wrinkle");
-      fontTesterMaskEl?.classList.toggle("is-rough", isRoughFont());
-      fontTesterMaskEl?.classList.toggle(
-        "is-wip",
-        activeAgingFont !== "wrinkle" && !isRoughFont() && currentAgeYears >= 100
-      );
+      updateFontMaskClasses();
     }
   }
 
@@ -719,6 +736,7 @@ function resetToRebirth() {
 
   if (speedSliderEl) speedSliderEl.value = "0";
   if (youngerTotalCostEl) youngerTotalCostEl.textContent = "0$";
+  updateFontMaskClasses(0);
   setAgingAxis(0);
 }
 

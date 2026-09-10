@@ -428,7 +428,6 @@ p {
   font-size: 2.7778vh;
 }
 
-.checks p,
 .younger p {
   display: flex;
   justify-content: space-between;
@@ -436,9 +435,18 @@ p {
   white-space: nowrap;
 }
 
+.checks p {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 4.5vh;
+  align-items: center;
+  column-gap: 0.3vh;
+  white-space: nowrap;
+}
+
 .aging-option {
   cursor: pointer;
   user-select: none;
+  min-height: 1.18em;
 }
 
 .aging-option:focus-visible {
@@ -455,7 +463,8 @@ p {
   flex: 0 0 4.5vh;
   width: 4.5vh;
   justify-content: space-between;
-  align-items: baseline;
+  align-items: center;
+  line-height: 1;
   text-align: right;
 }
 
@@ -469,7 +478,6 @@ p {
   margin: 0 0.16em;
   border-radius: 50%;
   background: var(--purple);
-  transform: translateY(-3px);
 }
 
 .purple-dot.is-hidden {
