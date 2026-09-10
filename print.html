@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Print Aging</title>
+    <style>
+      @font-face {
+        font-family: "ABC Oracle Triple";
+        src: url("libraries/ABCOracleTriple-Light.otf") format("opentype");
+        font-weight: 400;
+        font-style: normal;
+      }
+
+      @page {
+        size: 72mm 130mm;
+        margin: 0;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        width: 72mm;
+        min-height: 130mm;
+        margin: 0;
+        background: #fff;
+      }
+
+      body {
+        overflow: hidden;
+      }
+
+      .print-sheet {
+        width: 72mm;
+        height: 130mm;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: flex-start;
+        overflow: hidden;
+        background: #fff;
+        color: #000;
+        print-color-adjust: exact;
+        -webkit-print-color-adjust: exact;
+      }
+
+      .print-image {
+        display: block;
+        width: 72mm;
+        height: auto;
+        max-width: 72mm;
+        max-height: 92mm;
+        object-fit: contain;
+        object-position: top center;
+      }
+
+      .print-meta {
+        width: 72mm;
+        margin-top: 3mm;
+        font-family: "ABC Oracle Triple", monospace;
+        font-size: 6.2mm;
+        line-height: 1.02;
+        text-align: center;
+        white-space: nowrap;
+      }
+
+      @media screen {
+        html,
+        body {
+          width: 100%;
+          height: 100%;
+          min-height: 100%;
+        }
+
+        body {
+          display: grid;
+          place-items: center;
+          background: #e2e2e2;
+        }
+
+        .print-sheet {
+          box-shadow: 0 0 0 1px #000;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="print-sheet">
+      <img class="print-image" alt="" />
+      <div class="print-meta"></div>
+    </main>
+
+    <script>
+      const params = new URLSearchParams(window.location.search);
+      const imageEl = document.querySelector(".print-image");
+      const metaEl = document.querySelector(".print-meta");
+      const printId = params.get("id") || String(Date.now());
+      const imageSrc = params.get("src") || "";
+      const lines = [
+        params.get("name") || "Name",
+        params.get("age") || "",
+        `${params.get("days") || "0"}D`,
+        `${params.get("hours") || "0"}H`,
+        `${params.get("seconds") || "0"}S`,
+      ];
+
+      imageEl.src = imageSrc;
+      metaEl.replaceChildren(
+        ...lines.map((line) => {
+          const item = document.createElement("div");
+          item.textContent = line;
+          return item;
+        })
+      );
+
+      function requestPrintOnce() {
+        const storageKey = `aging-print-${printId}`;
+        if (sessionStorage.getItem(storageKey) === "done") return;
+
+        sessionStorage.setItem(storageKey, "done");
+        requestAnimationFrame(() => {
+          window.setTimeout(() => window.print(), 120);
+        });
+      }
+
+      if (imageEl.complete) {
+        requestPrintOnce();
+      } else {
+        imageEl.addEventListener("load", requestPrintOnce, { once: true });
+        imageEl.addEventListener("error", requestPrintOnce, { once: true });
+      }
+
+      window.addEventListener("afterprint", () => {
+        window.setTimeout(() => window.close(), 250);
+      });
+    </script>
+  </body>
+</html>

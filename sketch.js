@@ -75,7 +75,6 @@ let roughCanvasUpdateTimer = 0;
 let isPrintPending = false;
 let isPrintDialogPending = false;
 let lastPrintDialogTimestamp = -Infinity;
-let printImageStageEl = null;
 let mathmaticFont = null;
 const mathmaticGlyphCache = new Map();
 const printImagePaths = [
@@ -794,8 +793,7 @@ function printAgedLetter(event) {
   isPrintPending = true;
   isPrintDialogPending = true;
   lastPrintDialogTimestamp = now;
-  showPrintImage(printImage);
-  window.print();
+  openPrintPage(printImage);
 
   window.setTimeout(() => {
     isPrintPending = false;
@@ -820,38 +818,38 @@ function pickRandomPrintImage() {
   return cachedImage?.complete ? cachedImage : { src: path };
 }
 
-function showPrintImage(image) {
-  removePrintImage();
+function openPrintPage(image) {
+  const url = new URL("print.html", window.location.href);
+  const meta = getPrintMeta();
+  url.searchParams.set("id", `${Date.now()}-${Math.random().toString(36).slice(2)}`);
+  url.searchParams.set("src", image.src);
+  url.searchParams.set("name", meta.name);
+  url.searchParams.set("age", meta.age);
+  url.searchParams.set("days", meta.days);
+  url.searchParams.set("hours", meta.hours);
+  url.searchParams.set("seconds", meta.seconds);
 
-  printImageStageEl = document.createElement("div");
-  printImageStageEl.className = "print-image-stage";
-  printImageStageEl.setAttribute("aria-hidden", "true");
-  printImageStageEl.addEventListener("click", removePrintImage);
-
-  const printImageEl = document.createElement("img");
-  printImageEl.alt = "";
-  printImageEl.src = image.src;
-  printImageStageEl.append(printImageEl);
-  document.body.append(printImageStageEl);
+  const popup = window.open(url.toString(), "_blank", "popup,width=420,height=720");
+  if (!popup) {
+    window.location.href = url.toString();
+  }
 }
 
-function removePrintImage() {
-  printImageStageEl?.remove();
-  printImageStageEl = null;
+function getPrintMeta() {
+  const name = (resultNameEl?.textContent || "").trim() || "Name";
+  const age = (ageYearsEl?.textContent || "").trim();
+  const days = (ageDaysEl?.textContent || "0").trim();
+  const hours = (ageHoursEl?.textContent || "0").trim();
+  const seconds = (ageSecondsEl?.textContent || "0").trim();
+
+  return { name, age, days, hours, seconds };
 }
 
 window.addEventListener("afterprint", () => {
-  removePrintImage();
   window.setTimeout(() => {
     isPrintDialogPending = false;
   }, printDialogCooldownMs);
   isPrintPending = false;
-});
-
-window.addEventListener("keydown", (event) => {
-  if (event.key === "Escape") {
-    removePrintImage();
-  }
 });
 
 printActionEl?.addEventListener("click", printAgedLetter);
