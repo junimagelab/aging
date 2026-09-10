@@ -74,6 +74,7 @@ let activeTextUpdateTimer = 0;
 let roughCanvasUpdateTimer = 0;
 let isPrintPending = false;
 let lastPrintRequestTimestamp = -Infinity;
+let printSnapshotEl = null;
 let mathmaticFont = null;
 const mathmaticGlyphCache = new Map();
 const maxTimeSpeed = yearSeconds * 2;
@@ -781,6 +782,7 @@ function printAgedLetter(event) {
   if (activeAgingFont === "wrinkle") {
     window.WrinkleLetters?.refreshLayout();
   }
+  createPrintSnapshot();
   window.print();
 
   window.setTimeout(() => {
@@ -788,7 +790,100 @@ function printAgedLetter(event) {
   }, printCooldownMs);
 }
 
+function removePrintSnapshot() {
+  printSnapshotEl?.remove();
+  printSnapshotEl = null;
+}
+
+function createPrintSnapshot() {
+  removePrintSnapshot();
+
+  const maskRect = fontTesterMaskEl.getBoundingClientRect();
+  const snapshotScale = Math.min(2, Math.max(1, window.devicePixelRatio || 1));
+  const snapshotCanvas = document.createElement("canvas");
+  snapshotCanvas.width = Math.max(1, Math.round(maskRect.width * snapshotScale));
+  snapshotCanvas.height = Math.max(1, Math.round(maskRect.height * snapshotScale));
+
+  const ctx = snapshotCanvas.getContext("2d");
+  if (!ctx) return;
+
+  ctx.scale(snapshotScale, snapshotScale);
+  ctx.fillStyle = "#fff";
+  ctx.fillRect(0, 0, maskRect.width, maskRect.height);
+
+  const visibleCanvas = getVisiblePrintCanvas();
+  if (visibleCanvas) {
+    const canvasRect = visibleCanvas.getBoundingClientRect();
+    ctx.drawImage(
+      visibleCanvas,
+      canvasRect.left - maskRect.left,
+      canvasRect.top - maskRect.top,
+      canvasRect.width,
+      canvasRect.height
+    );
+  } else {
+    drawTextPrintFallback(ctx, maskRect);
+  }
+
+  printSnapshotEl = document.createElement("div");
+  printSnapshotEl.className = "print-snapshot";
+  printSnapshotEl.setAttribute("aria-hidden", "true");
+
+  const image = document.createElement("img");
+  image.alt = "";
+  image.src = snapshotCanvas.toDataURL("image/png");
+  printSnapshotEl.append(image);
+  document.body.append(printSnapshotEl);
+}
+
+function getVisiblePrintCanvas() {
+  return Array.from(fontTesterMaskEl.querySelectorAll("canvas")).find((canvas) => {
+    const style = getComputedStyle(canvas);
+    return (
+      style.display !== "none" &&
+      style.visibility !== "hidden" &&
+      Number.parseFloat(style.opacity || "1") > 0 &&
+      canvas.width > 1 &&
+      canvas.height > 1
+    );
+  });
+}
+
+function drawTextPrintFallback(ctx, maskRect) {
+  const computed = getComputedStyle(fontTesterEl);
+  const text = fontTesterEl.textContent || "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+  const fontSize = Number.parseFloat(computed.fontSize) || 120;
+  const lineHeight = Number.parseFloat(computed.lineHeight) || fontSize * 1.05;
+  const letterSpacing = Number.parseFloat(computed.letterSpacing) || 0;
+  const testerRect = fontTesterEl.getBoundingClientRect();
+  const xStart = testerRect.left - maskRect.left;
+  let x = xStart;
+  let y = testerRect.top - maskRect.top;
+
+  ctx.fillStyle = computed.color === "rgba(0, 0, 0, 0)" ? "#000" : computed.color;
+  ctx.font = `${computed.fontWeight} ${fontSize}px ${computed.fontFamily}`;
+  ctx.textBaseline = "top";
+
+  for (const character of text) {
+    if (character === "\n") {
+      x = xStart;
+      y += lineHeight;
+      continue;
+    }
+
+    const advance = ctx.measureText(character).width + letterSpacing;
+    if (character !== " " && x > xStart && x + advance > maskRect.width) {
+      x = xStart;
+      y += lineHeight;
+    }
+
+    ctx.fillText(character, x, y);
+    x += character === " " ? fontSize * 0.55 + letterSpacing : advance;
+  }
+}
+
 window.addEventListener("afterprint", () => {
+  removePrintSnapshot();
   window.setTimeout(() => {
     isPrintPending = false;
   }, printCooldownMs);
